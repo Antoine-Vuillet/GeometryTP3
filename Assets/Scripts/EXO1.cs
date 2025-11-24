@@ -6,12 +6,21 @@ public class EXO1 : MonoBehaviour
 {
 
     [SerializeField] GameObject cube;
-    [SerializeField] float radius = 0.5f;
-    [SerializeField] List<compo> cubes;
-    [SerializeField] int maxDepth = 4;
+    List<Compo> cubes;
+    List<Sphere> spheres;
+    [SerializeField] int maxDepth = 1;
+    [SerializeField] float résolution;
+
 
     [System.Serializable]
-    public struct compo
+    public struct Sphere
+    {
+        public Vector3 center;
+        public float radius;
+    }
+
+    [System.Serializable]
+    public struct Compo
     {
         public Vector3 position;
         public int div;
@@ -21,40 +30,101 @@ public class EXO1 : MonoBehaviour
     void Start()
     {
         GameObject first=Instantiate(cube, new Vector3(0, 0, 0), Quaternion.identity);
-        compo firstCompo = new compo();
+        Compo firstCompo = new Compo();
         firstCompo.position = first.transform.position;
         firstCompo.div = 1;
         firstCompo.obj = first;
-        cubes = new List<compo>();
+        cubes = new List<Compo>();
         cubes.Add(firstCompo);
+        Sphere sphere1 = new Sphere();
+        sphere1.center = new Vector3(0, 0, 0);
+        sphere1.radius = 0.5f;
+        Sphere sphere2 = new Sphere();
+        sphere2.center = new Vector3(-0.1f, 0, 0);
+        sphere2.radius = 0.2f;
+        spheres = new List<Sphere>();
+        spheres.Add(sphere1);
+        //spheres.Add(sphere2);
         CreateSphere();
+        ResolutionChange();
+        print(cubes.Count);
     }
 
     void CreateSphere()
     {
-        int depth = 0;
-        Vector3 center = Vector3.zero;
-        while (depth < maxDepth) {
-            List<compo> currentCubes = new List<compo>(cubes);
-            for (int i = 0; i < currentCubes.Count; i++) {
-                Vector3 closest = currentCubes[i].position - center;
-                closest = closest.normalized * radius;
-                compo current = currentCubes[i];
-                if(Vector3.Distance(center,current.position) < radius)
+
+        for (int depth = 0; depth < maxDepth; depth++)
+        {
+            for (int i = cubes.Count - 1; i >= 0; i--)
+            {
+                Compo c = cubes[i];
+                float size = c.obj.transform.localScale.x;
+                float halfDiagonal =(float)Math.Sqrt(2*Math.Pow(size/2f,2));
+                float minDist = float.MaxValue;
+                float radius = 0f;
+                for (int j=0;j<spheres.Count;j++)
                 {
-                    Divide(i);
-                } else if (Mathf.Abs(closest.x - current.position.x) < 1f / current.div && Mathf.Abs(closest.y - current.position.y) < 1f / current.div && Mathf.Abs(closest.z - current.position.z) < 1f / current.div)
+                    Sphere s = spheres[j];
+                    float currdist = Vector3.Distance(s.center, c.position);
+                    currdist -= s.radius;
+                    if (currdist < minDist)
+                    {
+                        minDist = currdist;
+                        radius = s.radius;
+                    }
+                }
+
+                bool intersectsSphere =
+                    minDist <= radius+halfDiagonal;
+                print(halfDiagonal+" "+minDist+" "+radius + " "+ (halfDiagonal+minDist<=radius));
+                if (halfDiagonal + minDist <= radius)
+                {
+                    
+                }
+                else if(intersectsSphere)
                 {
                     Divide(i);
                 }
                 else
                 {
-                    Destroy(cubes[i].obj);
+                    Destroy(c.obj);
                     cubes.RemoveAt(i);
                 }
-
             }
-            depth++;
+        }
+    }
+
+    void IntersectSphere()
+    {
+        for (int depth = 0; depth < maxDepth; depth++)
+        {
+            for (int i = cubes.Count - 1; i >= 0; i--)
+            {
+                Compo c = cubes[i];
+                float size = c.obj.transform.localScale.x;
+                float halfDiagonal = (float)Math.Sqrt(2 * Math.Pow(size / 2f, 2));
+                int count = 0;
+                for (int j = 0; j < spheres.Count; j++)
+                {
+                    Sphere s = spheres[j];
+                    float currdist = Vector3.Distance(s.center, c.position);
+                    float radius = s.radius;
+                    if (currdist <= s.radius + halfDiagonal)
+                    {
+                        count++;
+                    }
+                }
+
+                if (count >=2)
+                {
+                    Divide(i);
+                }
+                else
+                {
+                    Destroy(c.obj);
+                    cubes.RemoveAt(i);
+                }
+            }
         }
     }
 
@@ -62,28 +132,31 @@ public class EXO1 : MonoBehaviour
     void Divide(int index)
     {
         Vector3 position = cubes[index].position;
-        int oldDiv = cubes[index].div;
-        if (oldDiv == 0) oldDiv = 1;
+        float oldSize = cubes[index].obj.transform.localScale.x;
 
         GameObject oldObj = cubes[index].obj;
 
+        int oldDiv = cubes[index].div;
+
         GameObject[] newCubes = new GameObject[8];
 
-        float scaleFactor = 1f / (oldDiv + 1);
+        float newSize = oldSize / 2f;
+        float offsetDist = oldSize / 4f;
 
+        int i = 0;
         for (int x = -1; x <= 1; x += 2)
         {
             for (int y = -1; y <= 1; y += 2)
             {
                 for (int z = -1; z <= 1; z += 2)
                 {
-                    Vector3 offset = new Vector3(x * scaleFactor, y * scaleFactor, z * scaleFactor) * cube.transform.localScale.x * scaleFactor;
+                    Vector3 offset = new Vector3(x, y, z) * offsetDist;
                     Vector3 newPos = position + offset;
 
                     GameObject inst = Instantiate(cube, newPos, Quaternion.identity);
-                    inst.transform.localScale = cube.transform.localScale * scaleFactor;
+                    inst.transform.localScale = new Vector3(newSize, newSize, newSize);
 
-                    newCubes[ToIndex(x, y, z)] = inst;
+                    newCubes[i++] = inst;
                 }
             }
         }
@@ -91,25 +164,23 @@ public class EXO1 : MonoBehaviour
         Destroy(oldObj);
         cubes.RemoveAt(index);
 
-        for (int i = 0; i < 8; i++)
+        for (int j = 0; j < 8; j++)
         {
-            compo newCompo = new compo();
-            newCompo.position = newCubes[i].transform.position;
+            Compo newCompo = new Compo();
+            newCompo.position = newCubes[j].transform.position;
+            newCompo.obj = newCubes[j];
             newCompo.div = oldDiv + 1;
-            newCompo.obj = newCubes[i];
             cubes.Add(newCompo);
         }
     }
 
-
-
-    int ToIndex(int x, int y, int z)
+    void ResolutionChange()
     {
-        int xi = (x == 1) ? 1 : 0;
-        int yi = (y == 1) ? 1 : 0;
-        int zi = (z == 1) ? 1 : 0;
-
-        return (xi << 2) | (yi << 1) | zi;
+        for (int i = cubes.Count - 1; i >= 0; i--)
+        {
+            GameObject c = cubes[i].obj;
+            c.transform.localScale = c.transform.localScale * résolution;
+        }
     }
 
 }
