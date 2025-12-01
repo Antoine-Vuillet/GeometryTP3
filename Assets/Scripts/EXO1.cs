@@ -44,10 +44,9 @@ public class EXO1 : MonoBehaviour
         sphere2.radius = 0.2f;
         spheres = new List<Sphere>();
         spheres.Add(sphere1);
-        //spheres.Add(sphere2);
-        CreateSphere();
+        spheres.Add(sphere2);
+        IntersectSphere();
         ResolutionChange();
-        print(cubes.Count);
     }
 
     void CreateSphere()
@@ -74,10 +73,8 @@ public class EXO1 : MonoBehaviour
                     }
                 }
 
-                bool intersectsSphere =
-                    minDist <= radius+halfDiagonal;
-                print(halfDiagonal+" "+minDist+" "+radius + " "+ (halfDiagonal+minDist<=radius));
-                if (halfDiagonal + minDist <= radius)
+                bool intersectsSphere = minDist <= radius+halfDiagonal;
+                if (halfDiagonal/1.4 + minDist <= radius)
                 {
                     
                 }
@@ -115,7 +112,7 @@ public class EXO1 : MonoBehaviour
                     }
                 }
 
-                if (count >=2)
+                if (count >=spheres.Count)
                 {
                     Divide(i);
                 }
@@ -183,4 +180,8 @@ public class EXO1 : MonoBehaviour
         }
     }
 
+    private void OnTriggerEnter(Collider other)
+    {
+        Debug.Log("Trigger Entered by " + other.name);
+    }
 }
